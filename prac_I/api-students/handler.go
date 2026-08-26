@@ -195,27 +195,38 @@ func patchStudent(c *fiber.Ctx) error {
 		return fail(c, fiber.StatusBadRequest, "tidak ada field yang dikirim untuk diubah")
 	}
 
+	errs := map[string]string{}
+
 	if req.NIM != nil {
 		trimmed := strings.TrimSpace(*req.NIM)
 		if trimmed == "" {
-			return failValidation(c, map[string]string{"nim": "tidak boleh kosong"})
-		}
-		if isNIMTaken(trimmed, id) {
+			errs["nim"] = "tidak boleh kosong"
+		} else if isNIMTaken(trimmed, id) {
 			return fail(c, fiber.StatusConflict, "NIM sudah terdaftar")
 		}
-		students[i].NIM = trimmed
 	}
 	if req.Name != nil {
 		trimmed := strings.TrimSpace(*req.Name)
 		if trimmed == "" {
-			return failValidation(c, map[string]string{"name": "tidak boleh kosong"})
+			errs["name"] = "tidak boleh kosong"
 		}
-		students[i].Name = trimmed
 	}
 	if req.Grade != nil {
 		if *req.Grade < 0 || *req.Grade > 100 {
-			return failValidation(c, map[string]string{"grade": "rentang nilai 0-100"})
+			errs["grade"] = "nilai harus berada di rentang 0-100"
 		}
+	}
+	if len(errs) > 0 {
+		return failValidation(c, errs)
+	}
+
+	if req.NIM != nil {
+		students[i].NIM = strings.TrimSpace(*req.NIM)
+	}
+	if req.Name != nil {
+		students[i].Name = strings.TrimSpace(*req.Name)
+	}
+	if req.Grade != nil {
 		students[i].Grade = *req.Grade
 	}
 	if req.IsActive != nil {

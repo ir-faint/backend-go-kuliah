@@ -1,4 +1,4 @@
-package apistudents
+package main
 
 import (
 	"strconv"
@@ -66,10 +66,10 @@ func parseListQuery(c *fiber.Ctx) ListQuery {
 	if q.Limit < 1 {
 		q.Limit = 10
 	}
-	if q.Limit > 100 { // batas atas wajib ada
+	if q.Limit > 100 {
 		q.Limit = 100
 	}
-	if !allowedSortFields[q.Sort] { // daftar putih, bukan daftar hitam
+	if !allowedSortFields[q.Sort] {
 		q.Sort = "id"
 	}
 	if q.Order != "desc" {

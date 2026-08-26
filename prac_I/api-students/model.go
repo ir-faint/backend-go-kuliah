@@ -1,34 +1,34 @@
-package apistudents
+package main
 
 type Student struct {
-	ID       int    `json:"id"`
-	NIM      string `json:"nim"`
-	Name     string `json:"name"`
-	Grade    string `json:"grade"`
-	IsActive bool   `json:"is_active"`
+	ID       int     `json:"id"`
+	NIM      string  `json:"nim"`
+	Name     string  `json:"name"`
+	Grade    float64 `json:"grade"`
+	IsActive bool    `json:"is_active"`
 }
 
 type CreateStudentRequest struct {
-	NIM      string `json:"nim"`
-	Name     string `json:"name"`
-	Grade    string `json:"grade"`
-	IsActive bool   `json:"is_active"`
+	NIM      string  `json:"nim"`
+	Name     string  `json:"name"`
+	Grade    float64 `json:"grade"`
+	IsActive bool    `json:"is_active"`
 }
 
 type UpdateStudentRequest struct {
-	ID       int    `json:"id"`
-	NIM      string `json:"nim"`
-	Name     string `json:"name"`
-	Grade    string `json:"grade"`
-	IsActive bool   `json:"is_active"`
+	ID       int     `json:"id"`
+	NIM      string  `json:"nim"`
+	Name     string  `json:"name"`
+	Grade    float64 `json:"grade"`
+	IsActive bool    `json:"is_active"`
 }
 
 type PatchStudentRequest struct {
-	ID       int     `json:"id"`
-	NIM      *string `json:"nim"`
-	Name     *string `json:"name"`
-	Grade    *string `json:"grade"`
-	IsActive *bool   `json:"is_active"`
+	ID       int      `json:"id"`
+	NIM      *string  `json:"nim"`
+	Name     *string  `json:"name"`
+	Grade    *float64 `json:"grade"`
+	IsActive *bool    `json:"is_active"`
 }
 
 type WebResponse struct {
