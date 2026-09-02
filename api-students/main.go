@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
 	"strings"
 	"time"
+
+	"api-students/config"
+	"api-students/database"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -27,6 +31,16 @@ func requireJSON(c *fiber.Ctx) error {
 }
 
 func main() {
+	config.LoadEnv()
+
+	ctx := context.Background()
+	pool, err := database.NewPool(ctx)
+	if err != nil {
+		log.Printf("Peringatan koneksi database: %v", err)
+	} else {
+		defer pool.Close()
+	}
+
 	app := fiber.New(fiber.Config{
 		AppName: "API Students - Praktikum Backend",
 	})
@@ -41,6 +55,17 @@ func main() {
 
 	api := app.Group("/api/v1")
 	api.Get("/health", func(c *fiber.Ctx) error {
+		if pool == nil {
+			return fail(c, fiber.StatusServiceUnavailable, "database tidak terhubung")
+		}
+
+		pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := pool.Ping(pingCtx); err != nil {
+			return fail(c, fiber.StatusServiceUnavailable, "database tidak tersedia")
+		}
+
 		return ok(c, "server berjalan", fiber.Map{"timestamp": time.Now()})
 	})
 	s := api.Group("/students", requireJSON)
@@ -58,3 +83,4 @@ func main() {
 
 	log.Fatal(app.Listen(":3000"))
 }
+
