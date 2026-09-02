@@ -276,14 +276,95 @@ Menghapus data mahasiswa berdasarkan ID.
 
 ---
 
+## ⚙️ Pengaturan Environment Variables (`.env`)
+
+Sebelum menjalankan server, buat berkas `.env` dengan menyalin berkas sampel `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+Sesuaikan nilai variabel environment berikut di dalam berkas `.env`:
+
+| Variabel | Default Contoh | Keterangan |
+| :--- | :--- | :--- |
+| `APP_PORT` | `3000` | Port server HTTP tempat API berjalan |
+| `DB_HOST` | `localhost` | Host server PostgreSQL |
+| `DB_PORT` | `5432` | Port server PostgreSQL |
+| `DB_USER` | `postgres` | Username akun PostgreSQL |
+| `DB_PASSWORD` | `root` | Password akun PostgreSQL |
+| `DB_NAME` | `praktikum_backend` | Nama database PostgreSQL |
+| `DB_SSLMODE` | `disable` | Mode SSL koneksi PostgreSQL (`disable` untuk lokal) |
+| `DB_MAX_CONNS` | `10` | Batas maksimum koneksi dalam pool database |
+
+---
+
+## 🗄️ Skema Tabel & Setup Database dari Nol
+
+### 1. Skema Tabel (`students`)
+
+Tabel `students` menyimpan data mahasiswa dengan struktur berikut:
+
+| Kolom | Tipe Data | Constraint / Aturan | Keterangan |
+| :--- | :--- | :--- | :--- |
+| `id` | `SERIAL` | `PRIMARY KEY` | ID unik mahasiswa (Auto Increment) |
+| `nim` | `CHAR(8)` | `NOT NULL UNIQUE` | Nomor Induk Mahasiswa (8 karakter, unik) |
+| `name` | `VARCHAR(100)` | `NOT NULL` | Nama lengkap mahasiswa |
+| `grade` | `NUMERIC(3,2)` | `CHECK (grade >= 0 AND grade <= 4.00)` | IPK / Nilai mahasiswa (rentang `0.00` - `4.00`) |
+| `is_active` | `BOOLEAN` | `NOT NULL DEFAULT TRUE` | Status keaktifan mahasiswa |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Waktu pembuatan record data |
+
+---
+
+### 2. Panduan Setup Database dari Nol
+
+Ikuti langkah-langkah di bawah ini jika baru pertama kali melakukan clone project:
+
+#### Step 1: Buat Database di PostgreSQL
+Buka terminal PostgreSQL (`psql`) atau GUI Client (DBeaver / pgAdmin / TablePlus), lalu eksekusi command berikut:
+
+```sql
+CREATE DATABASE praktikum_backend;
+```
+
+#### Step 2: Eksekusi File Migrasi SQL
+Jalankan file DDL migrasi `migrations/001_create_students.sql` ke dalam database `praktikum_backend`.
+
+- **Via Terminal / CLI (`psql`):**
+  ```bash
+  psql -U postgres -d praktikum_backend -f migrations/001_create_students.sql
+  ```
+
+- **Via GUI SQL Client (DBeaver / pgAdmin / TablePlus):**
+  Buka file `migrations/001_create_students.sql` atau eksekusi query DDL berikut:
+
+  ```sql
+  CREATE TABLE IF NOT EXISTS students ( 
+      id           SERIAL       PRIMARY KEY, 
+      nim          CHAR(8)      NOT NULL UNIQUE, 
+      name         VARCHAR(100) NOT NULL, 
+      grade        NUMERIC(3,2) CHECK (grade >= 0 AND grade <= 4.00), 
+      is_active    BOOLEAN      NOT NULL DEFAULT TRUE, 
+      created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW() 
+  );
+  ```
+
+---
+
 ## 🏃 Cara Menjalankan Server
 
-1. Pastikan dependensi Go sudah terpasang:
+1. Salin dan sesuaikan file `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Pastikan database PostgreSQL sudah dibuat dan migrasi tabel sudah dijalankan.
+3. Install / rapikan dependensi Go:
    ```bash
    go mod tidy
    ```
-2. Jalankan aplikasi:
+4. Jalankan aplikasi server:
    ```bash
    go run .
    ```
-3. Server akan berjalan pada **`http://localhost:3000`**.
+5. Server akan aktif dan siap menerima request di **`http://localhost:3000`**.
+
