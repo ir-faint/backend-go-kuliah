@@ -36,6 +36,10 @@ type studentRepository struct {
 	pool *pgxpool.Pool
 }
 
+func NewStudentRepository(pool *pgxpool.Pool) StudentRepository {
+	return &studentRepository{pool: pool}
+}
+
 func buildFilter(q model.ListQuery) (string, []any) {
 	where := " WHERE 1 = 1"
 	args := []any{}
