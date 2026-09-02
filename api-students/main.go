@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"api-students/app/repository"
 	"api-students/config"
 	"api-students/database"
 
@@ -36,10 +37,12 @@ func main() {
 	ctx := context.Background()
 	pool, err := database.NewPool(ctx)
 	if err != nil {
-		log.Printf("Peringatan koneksi database: %v", err)
-	} else {
-		defer pool.Close()
+		log.Fatalf("database: %v", err)
 	}
+	defer pool.Close()
+
+	studentRepo := repository.NewStudentRepository(pool)
+	studentHandler := NewStudentHandler(studentRepo)
 
 	app := fiber.New(fiber.Config{
 		AppName: "API Students - Praktikum Backend",
@@ -70,12 +73,12 @@ func main() {
 	})
 	s := api.Group("/students", requireJSON)
 
-	s.Get("/", listStudents)
-	s.Get("/:id", getStudent)
-	s.Post("/", createStudent)
-	s.Put("/:id", replaceStudent)
-	s.Patch("/:id", patchStudent)
-	s.Delete("/:id", deleteStudent)
+	s.Get("/", studentHandler.listStudents)
+	s.Get("/:id", studentHandler.getStudent)
+	s.Post("/", studentHandler.createStudent)
+	s.Put("/:id", studentHandler.replaceStudent)
+	s.Patch("/:id", studentHandler.patchStudent)
+	s.Delete("/:id", studentHandler.deleteStudent)
 
 	app.Use(func(c *fiber.Ctx) error {
 		return fail(c, fiber.StatusNotFound, "endpoint tidak ditemukan")
@@ -83,4 +86,3 @@ func main() {
 
 	log.Fatal(app.Listen(":3000"))
 }
-
