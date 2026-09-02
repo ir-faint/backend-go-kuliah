@@ -1,6 +1,7 @@
 package main
 
 import (
+	"api-students/app/model"
 	"sort"
 	"strconv"
 	"strings"
@@ -8,7 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-var students []Student
+var students []model.Student
 var nextStudentID = 1
 
 func findStudentIndex(id int) int {
@@ -31,7 +32,7 @@ func isNIMTaken(nim string, excludeID int) bool {
 
 func listStudents(c *fiber.Ctx) error {
 	q := parseListQuery(c)
-	var filtered []Student
+	var filtered []model.Student
 
 	for _, s := range students {
 		if q.IsActive != nil && s.IsActive != *q.IsActive {
@@ -76,7 +77,7 @@ func listStudents(c *fiber.Ctx) error {
 		end = total
 	}
 
-	return okList(c, "daftar mahasiswa berhasil diambil", filtered[start:end], &Meta{
+	return okList(c, "daftar mahasiswa berhasil diambil", filtered[start:end], &model.Meta{
 		Page: q.Page, Limit: q.Limit, Total: total, TotalPages: totalPages,
 	})
 }
@@ -95,7 +96,7 @@ func getStudent(c *fiber.Ctx) error {
 }
 
 func createStudent(c *fiber.Ctx) error {
-	var req CreateStudentRequest
+	var req model.CreateStudentRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
 	}
@@ -119,7 +120,7 @@ func createStudent(c *fiber.Ctx) error {
 		return failValidation(c, errs)
 	}
 
-	baru := Student{
+	baru := model.Student{
 		ID:       nextStudentID,
 		NIM:      req.NIM,
 		Name:     req.Name,
@@ -143,7 +144,7 @@ func replaceStudent(c *fiber.Ctx) error {
 		return fail(c, fiber.StatusNotFound, "mahasiswa tidak ditemukan")
 	}
 
-	var req UpdateStudentRequest
+	var req model.UpdateStudentRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
 	}
@@ -186,7 +187,7 @@ func patchStudent(c *fiber.Ctx) error {
 		return fail(c, fiber.StatusNotFound, "mahasiswa tidak ditemukan")
 	}
 
-	var req PatchStudentRequest
+	var req model.PatchStudentRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
 	}
