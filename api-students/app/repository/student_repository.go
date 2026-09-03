@@ -92,7 +92,7 @@ func (r *studentRepository) FindAll(
 	hasil := []model.Student{}
 	for rows.Next() {
 		var s model.Student
-		if err := rows.Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.IsActive); err != nil {
+		if err := rows.Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.IsActive, &s.CreatedAt); err != nil {
 			return nil, 0, fmt.Errorf("membaca baris student: %w", err)
 		}
 		hasil = append(hasil, s)
@@ -112,7 +112,7 @@ func (r *studentRepository) FindByID(
 	err := r.pool.QueryRow(ctx,
 		`SELECT id, nim, name, grade, is_active, created_at 
          FROM students WHERE id = $1`, id,
-	).Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.IsActive)
+	).Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.IsActive, &s.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -130,9 +130,9 @@ func (r *studentRepository) Create(
 	err := r.pool.QueryRow(ctx,
 		`INSERT INTO students (nim, name, grade, is_active) 
          VALUES ($1, $2, $3, $4) 
-         RETURNING id`,
+         RETURNING id, created_at`,
 		s.NIM, s.Name, s.Grade, s.IsActive,
-	).Scan(&s.ID)
+	).Scan(&s.ID, &s.CreatedAt)
 
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -152,7 +152,7 @@ func (r *studentRepository) Update(
          WHERE id = $5 
          RETURNING id, nim, name, grade, is_active, created_at`,
 		s.NIM, s.Name, s.Grade, s.IsActive, s.ID,
-	).Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.IsActive)
+	).Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.IsActive, &s.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

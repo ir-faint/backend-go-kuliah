@@ -4,6 +4,7 @@ import (
 	"api-students/app/model"
 	"api-students/app/repository"
 	"errors"
+	"log"
 	"strconv"
 	"strings"
 
@@ -101,6 +102,7 @@ func (h *StudentHandler) createStudent(c *fiber.Ctx) error {
 		IsActive: req.IsActive,
 	})
 	if err != nil {
+		log.Println("ERROR DETAIL CREATE:", err)
 		return errorHandler(c, err, "gagal menyimpan mahasiswa")
 	}
 
