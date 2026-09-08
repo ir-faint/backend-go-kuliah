@@ -23,6 +23,8 @@
 .env
 *.env
 !.env.example
+*.log
+/api-students/logs/
 
 # IDE and Editor files
 .idea/
