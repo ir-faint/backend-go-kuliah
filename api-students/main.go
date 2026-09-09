@@ -3,36 +3,21 @@ package main
 import (
 	"context"
 	"log"
-	"strings"
+	"log/slog"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"api-students/app/repository"
+	"api-students/app/service"
 	"api-students/config"
 	"api-students/database"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/requestid"
 )
-
-var payloadMethods = map[string]bool{
-	fiber.MethodPost:  true,
-	fiber.MethodPut:   true,
-	fiber.MethodPatch: true,
-}
-
-func requireJSON(c *fiber.Ctx) error {
-	if payloadMethods[c.Method()] {
-		if !strings.HasPrefix(c.Get("Content-Type"), fiber.MIMEApplicationJSON) {
-			return fail(c, fiber.StatusUnsupportedMediaType, "Content-Type harus application/json")
-		}
-	}
-	return c.Next()
-}
 
 func main() {
 	config.LoadEnv()
+	logger := config.NewLogger()
 
 	ctx := context.Background()
 	pool, err := database.NewPool(ctx)
@@ -42,47 +27,34 @@ func main() {
 	defer pool.Close()
 
 	studentRepo := repository.NewStudentRepository(pool)
-	studentHandler := NewStudentHandler(studentRepo)
+	studentService := service.NewStudentService(studentRepo)
 
-	app := fiber.New(fiber.Config{
-		AppName: "API Students - Praktikum Backend",
-	})
+	app := config.NewApp(logger, pool, studentService)
 
-	app.Use(requestid.New())
-	app.Use(logger.New())
-	app.Use(cors.New())
+	port := config.GetEnv("APP_PORT", "3000")
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, World!")
-	})
-
-	api := app.Group("/api/v1")
-	api.Get("/health", func(c *fiber.Ctx) error {
-		if pool == nil {
-			return fail(c, fiber.StatusServiceUnavailable, "database tidak terhubung")
+	go func() {
+		if err := app.Listen(":" + port); err != nil {
+			logger.Error("server berhenti", slog.String("error", err.Error()))
+			os.Exit(1)
 		}
+	}()
 
-		pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
+	logger.Info("server berjalan", slog.String("port", port))
 
-		if err := pool.Ping(pingCtx); err != nil {
-			return fail(c, fiber.StatusServiceUnavailable, "database tidak tersedia")
-		}
+	// Graceful shutdown: tunggu Ctrl+C / SIGTERM, lalu beri waktu request yang sedang berjalan untuk selesai.
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
 
-		return ok(c, "server berjalan", fiber.Map{"timestamp": time.Now()})
-	})
-	s := api.Group("/students", requireJSON)
+	logger.Info("sinyal berhenti diterima, menutup server")
 
-	s.Get("/", studentHandler.listStudents)
-	s.Get("/:id", studentHandler.getStudent)
-	s.Post("/", studentHandler.createStudent)
-	s.Put("/:id", studentHandler.replaceStudent)
-	s.Patch("/:id", studentHandler.patchStudent)
-	s.Delete("/:id", studentHandler.deleteStudent)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
 
-	app.Use(func(c *fiber.Ctx) error {
-		return fail(c, fiber.StatusNotFound, "endpoint tidak ditemukan")
-	})
+	if err := app.ShutdownWithContext(shutdownCtx); err != nil {
+		logger.Error("gagal menutup server dengan rapi", slog.String("error", err.Error()))
+	}
 
-	log.Fatal(app.Listen(":3000"))
+	logger.Info("server berhenti dengan rapi")
 }
