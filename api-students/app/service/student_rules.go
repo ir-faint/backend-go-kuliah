@@ -78,3 +78,12 @@ func ApplyPatch(
 func IsEmptyPatch(req model.PatchStudentRequest) bool {
 	return req.NIM == nil && req.Name == nil && req.Grade == nil && req.IsActive == nil
 }
+
+// CountTotalPages membulatkan ke atas tanpa memakai bilangan pecahan.
+func CountTotalPages(total, limit int) int {
+	if limit <= 0 {
+		return 0
+	}
+	return (total + limit - 1) / limit
+}
+
