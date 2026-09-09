@@ -75,7 +75,7 @@ func (r *studentRepository) FindAll(
 	}
 
 	sqlText := fmt.Sprintf(
-		`SELECT id, nim, name, grade, is_active 
+		`SELECT id, nim, name, grade, is_active, created_at 
          FROM students%s 
          ORDER BY %s %s 
          LIMIT $%d OFFSET $%d`,
