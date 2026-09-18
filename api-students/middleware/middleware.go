@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"log/slog"
+	"os"
 	"strings"
 	"time"
 
@@ -31,8 +32,6 @@ func RequireJSON(c *fiber.Ctx) error {
 }
 
 // RequestLogger mencatat setiap request ke log terstruktur.
-// Perhatikan polanya: fungsi yang MENGEMBALIKAN fungsi (closure) -
-// inilah cara middleware menerima dependensi dari luar.
 func RequestLogger(logger *slog.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		start := time.Now()
@@ -55,11 +54,22 @@ func RequestLogger(logger *slog.Logger) fiber.Handler {
 }
 
 // Register memasang seluruh middleware yang berlaku untuk semua route.
-// URUTAN PENTING: middleware dieksekusi sesuai urutan pemasangan.
 func Register(app *fiber.App, logger *slog.Logger) {
-	app.Use(requestid.New())       // 1. beri setiap request satu ID unik
-	app.Use(recover.New())         // 2. tangkap panic agar server tidak mati
-	app.Use(helmet.New())          // 3. pasang header keamanan dasar
-	app.Use(cors.New())            // 4. atur Cross-Origin Resource Sharing
+	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+	if allowedOrigins == "" {
+		allowedOrigins = os.Getenv("CORS_ALLOWED_ORIGINS")
+	}
+	if allowedOrigins == "" {
+		allowedOrigins = "*"
+	}
+
+	app.Use(requestid.New()) // 1. beri setiap request satu ID unik
+	app.Use(recover.New())   // 2. tangkap panic agar server tidak mati
+	app.Use(helmet.New())    // 3. pasang header keamanan dasar
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: allowedOrigins,
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		AllowMethods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+	})) // 4. atur Cross-Origin Resource Sharing
 	app.Use(RequestLogger(logger)) // 5. catat setiap request
 }
