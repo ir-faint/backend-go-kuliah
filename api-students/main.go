@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -13,23 +12,56 @@ import (
 	"api-students/app/service"
 	"api-students/config"
 	"api-students/database"
+	"api-students/helper"
+	"api-students/route"
 )
+
+const minSecretLength = 32
 
 func main() {
 	config.LoadEnv()
 	logger := config.NewLogger()
 
+	jwtSecret := config.GetEnv("JWT_SECRET", "")
+	if len(jwtSecret) < minSecretLength {
+		logger.Error("JWT_SECRET tidak diisi atau terlalu pendek",
+			slog.Int("minimal_karakter", minSecretLength),
+		)
+		os.Exit(1)
+	}
+
 	ctx := context.Background()
 	pool, err := database.NewPool(ctx)
 	if err != nil {
-		log.Fatalf("database: %v", err)
+		logger.Error("gagal terhubung ke database", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 	defer pool.Close()
 
+	userRepo := repository.NewUserRepository(pool)
+	tokenRepo := repository.NewTokenRepository(pool)
 	studentRepo := repository.NewStudentRepository(pool)
+
+	jwtIssuer := config.GetEnv("JWT_ISSUER", "api-students")
+	accessTTLMinutes := config.GetEnvInt("JWT_ACCESS_TTL_MINUTES", 15)
+	refreshTTLDays := config.GetEnvInt("JWT_REFRESH_TTL_DAYS", 7)
+
+	accessTTL := time.Duration(accessTTLMinutes) * time.Minute
+	refreshTTL := time.Duration(refreshTTLDays) * 24 * time.Hour
+
+	jwtManager := helper.NewJWTManager(jwtSecret, jwtIssuer, accessTTL)
+
+	authService := service.NewAuthService(userRepo, tokenRepo, jwtManager, refreshTTL)
 	studentService := service.NewStudentService(studentRepo)
 
-	app := config.NewApp(logger, pool, studentService)
+	deps := route.Dependencies{
+		Pool:           pool,
+		StudentService: studentService,
+		AuthService:    authService,
+		JWT:            jwtManager,
+	}
+
+	app := config.NewApp(logger, deps)
 
 	port := config.GetEnv("APP_PORT", "3000")
 

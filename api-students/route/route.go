@@ -12,6 +12,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type Dependencies struct {
+	Pool           *pgxpool.Pool
+	StudentService *service.StudentService
+	AuthService    *service.AuthService
+	JWT            *helper.JWTManager
+}
+
 // HealthCheck mengembalikan handler fiber untuk memeriksa kesehatan database.
 func HealthCheck(pool *pgxpool.Pool) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -31,16 +38,26 @@ func HealthCheck(pool *pgxpool.Pool) fiber.Handler {
 }
 
 // RegisterRoutes mendaftarkan seluruh endpoint API ke instansi Fiber.
-func RegisterRoutes(app *fiber.App, studentService *service.StudentService, pool *pgxpool.Pool) {
+func RegisterRoutes(app *fiber.App, deps Dependencies) {
 	api := app.Group("/api/v1")
-	api.Get("/health", HealthCheck(pool))
 
-	students := api.Group("/students", middleware.RequireJSON)
+	// Public endpoints
+	api.Get("/health", HealthCheck(deps.Pool))
 
-	students.Get("/", studentService.ListStudents)
-	students.Get("/:id", studentService.GetStudent)
-	students.Post("/", studentService.CreateStudent)
-	students.Put("/:id", studentService.ReplaceStudent)
-	students.Patch("/:id", studentService.PatchStudent)
-	students.Delete("/:id", studentService.DeleteStudent)
+	// Auth endpoints
+	auth := api.Group("/auth", middleware.RequireJSON)
+	auth.Post("/register", deps.AuthService.Register)
+	auth.Post("/login", middleware.LoginRateLimiter(), deps.AuthService.Login)
+	auth.Post("/refresh", deps.AuthService.Refresh)
+	auth.Post("/logout", deps.AuthService.Logout)
+	auth.Get("/me", middleware.RequireAuth(deps.JWT), deps.AuthService.Me)
+
+	// Protected endpoints (All students endpoints require auth)
+	students := api.Group("/students", middleware.RequireAuth(deps.JWT), middleware.RequireJSON)
+	students.Get("/", deps.StudentService.ListStudents)
+	students.Get("/:id", deps.StudentService.GetStudent)
+	students.Post("/", deps.StudentService.CreateStudent)
+	students.Put("/:id", deps.StudentService.ReplaceStudent)
+	students.Patch("/:id", deps.StudentService.PatchStudent)
+	students.Delete("/:id", deps.StudentService.DeleteStudent)
 }
