@@ -26,6 +26,7 @@ type StudentRepository interface {
 
 var whiteList = map[string]string{
 	"id":        "id",
+	"owner_id":  "owner_id",
 	"nim":       "nim",
 	"name":      "name",
 	"grade":     "grade",
@@ -75,7 +76,7 @@ func (r *studentRepository) FindAll(
 	}
 
 	sqlText := fmt.Sprintf(
-		`SELECT id, nim, name, grade, is_active, created_at 
+		`SELECT id, owner_id, nim, name, grade, is_active, created_at 
          FROM students%s 
          ORDER BY %s %s 
          LIMIT $%d OFFSET $%d`,
@@ -92,7 +93,7 @@ func (r *studentRepository) FindAll(
 	hasil := []model.Student{}
 	for rows.Next() {
 		var s model.Student
-		if err := rows.Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.IsActive, &s.CreatedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.OwnerID, &s.NIM, &s.Name, &s.Grade, &s.IsActive, &s.CreatedAt); err != nil {
 			return nil, 0, fmt.Errorf("membaca baris student: %w", err)
 		}
 		hasil = append(hasil, s)
@@ -110,9 +111,9 @@ func (r *studentRepository) FindByID(
 	var s model.Student
 
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, nim, name, grade, is_active, created_at 
+		`SELECT id, owner_id, nim, name, grade, is_active, created_at 
          FROM students WHERE id = $1`, id,
-	).Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.IsActive, &s.CreatedAt)
+	).Scan(&s.ID, &s.OwnerID, &s.NIM, &s.Name, &s.Grade, &s.IsActive, &s.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -128,10 +129,10 @@ func (r *studentRepository) Create(
 	ctx context.Context, s model.Student,
 ) (model.Student, error) {
 	err := r.pool.QueryRow(ctx,
-		`INSERT INTO students (nim, name, grade, is_active) 
-         VALUES ($1, $2, $3, $4) 
+		`INSERT INTO students (owner_id, nim, name, grade, is_active) 
+         VALUES ($1, $2, $3, $4, $5) 
          RETURNING id, created_at`,
-		s.NIM, s.Name, s.Grade, s.IsActive,
+		s.OwnerID, s.NIM, s.Name, s.Grade, s.IsActive,
 	).Scan(&s.ID, &s.CreatedAt)
 
 	if err != nil {
@@ -150,9 +151,9 @@ func (r *studentRepository) Update(
 	err := r.pool.QueryRow(ctx,
 		`UPDATE students SET nim = $1, name = $2, grade = $3, is_active = $4 
          WHERE id = $5 
-         RETURNING id, nim, name, grade, is_active, created_at`,
+         RETURNING id, owner_id, nim, name, grade, is_active, created_at`,
 		s.NIM, s.Name, s.Grade, s.IsActive, s.ID,
-	).Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.IsActive, &s.CreatedAt)
+	).Scan(&s.ID, &s.OwnerID, &s.NIM, &s.Name, &s.Grade, &s.IsActive, &s.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -173,8 +174,6 @@ func (r *studentRepository) Delete(ctx context.Context, id int) error {
 		return fmt.Errorf("menghapus student: %w", err)
 	}
 
-	// Perintah berhasil dijalankan, tetapi tidak ada baris yang terkena.
-	// Artinya id-nya memang tidak ada.
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
@@ -182,8 +181,6 @@ func (r *studentRepository) Delete(ctx context.Context, id int) error {
 	return nil
 }
 
-// isUniqueViolation memeriksa apakah error berasal dari pelanggaran
-// batasan UNIQUE. Kode 23505 adalah kode resmi PostgreSQL untuk itu.
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {

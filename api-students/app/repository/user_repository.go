@@ -14,6 +14,8 @@ type UserRepository interface {
 	FindByUsername(ctx context.Context, username string) (model.User, error)
 	FindByID(ctx context.Context, id int) (model.User, error)
 	Create(ctx context.Context, u model.User) (model.User, error)
+	UpdateRole(ctx context.Context, id int, role string) (model.User, error)
+	Delete(ctx context.Context, id int) error
 }
 
 type userRepository struct {
@@ -76,4 +78,35 @@ func (r *userRepository) Create(ctx context.Context, u model.User) (model.User, 
 	}
 
 	return u, nil
+}
+
+func (r *userRepository) UpdateRole(ctx context.Context, id int, role string) (model.User, error) {
+	var u model.User
+	err := r.pool.QueryRow(ctx,
+		`UPDATE users SET role = $1 WHERE id = $2
+         RETURNING id, username, email, password, role, is_active, created_at`,
+		role, id,
+	).Scan(&u.ID, &u.Username, &u.Email, &u.Password, &u.Role, &u.IsActive, &u.CreatedAt)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.User{}, ErrNotFound
+		}
+		return model.User{}, fmt.Errorf("mengubah role user: %w", err)
+	}
+
+	return u, nil
+}
+
+func (r *userRepository) Delete(ctx context.Context, id int) error {
+	tag, err := r.pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("menghapus user: %w", err)
+	}
+
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+
+	return nil
 }
