@@ -13,10 +13,14 @@ import (
 
 type StudentService struct {
 	StudentRepo repository.StudentRepository
+	perms       *helper.PermissionSet
 }
 
-func NewStudentService(studentRepo repository.StudentRepository) *StudentService {
-	return &StudentService{StudentRepo: studentRepo}
+func NewStudentService(studentRepo repository.StudentRepository, perms *helper.PermissionSet) *StudentService {
+	return &StudentService{
+		StudentRepo: studentRepo,
+		perms:       perms,
+	}
 }
 
 func (s *StudentService) ListStudents(c *fiber.Ctx) error {
@@ -54,12 +58,26 @@ func (s *StudentService) GetStudent(c *fiber.Ctx) error {
 		return errorTranslator(c, err, "gagal mengambil data mahasiswa")
 	}
 
+	current, ok := helper.CurrentUser(c)
+	if !ok {
+		return helper.Fail(c, fiber.StatusUnauthorized, "pengguna tidak terautentikasi")
+	}
+
+	if !CanAccessStudent(current, mahasiswa.OwnerID, s.perms, "student:read:any") {
+		return helper.Fail(c, fiber.StatusForbidden, "anda tidak memiliki akses ke data mahasiswa ini")
+	}
+
 	return helper.Success(c, "mahasiswa ditemukan", mahasiswa)
 }
 
 func (s *StudentService) CreateStudent(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
+
+	current, ok := helper.CurrentUser(c)
+	if !ok {
+		return helper.Fail(c, fiber.StatusUnauthorized, "pengguna tidak terautentikasi")
+	}
 
 	var req model.CreateStudentRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -71,13 +89,13 @@ func (s *StudentService) CreateStudent(c *fiber.Ctx) error {
 	}
 
 	baru, err := s.StudentRepo.Create(ctx, model.Student{
+		OwnerID:  current.ID,
 		NIM:      strings.TrimSpace(req.NIM),
 		Name:     strings.TrimSpace(req.Name),
 		Grade:    req.Grade,
 		IsActive: req.IsActive,
 	})
 	if err != nil {
-		// log.Println("ERROR DETAIL CREATE:", err)
 		return errorTranslator(c, err, "gagal menyimpan mahasiswa")
 	}
 
@@ -103,8 +121,23 @@ func (s *StudentService) ReplaceStudent(c *fiber.Ctx) error {
 		return helper.FailValidation(c, errs)
 	}
 
+	currentStudent, err := s.StudentRepo.FindByID(ctx, id)
+	if err != nil {
+		return errorTranslator(c, err, "gagal mengambil data mahasiswa")
+	}
+
+	current, ok := helper.CurrentUser(c)
+	if !ok {
+		return helper.Fail(c, fiber.StatusUnauthorized, "pengguna tidak terautentikasi")
+	}
+
+	if !CanAccessStudent(current, currentStudent.OwnerID, s.perms, "student:update:any") {
+		return helper.Fail(c, fiber.StatusForbidden, "anda tidak memiliki akses untuk mengubah data mahasiswa ini")
+	}
+
 	result, err := s.StudentRepo.Update(ctx, model.Student{
 		ID:       id,
+		OwnerID:  currentStudent.OwnerID,
 		NIM:      strings.TrimSpace(req.NIM),
 		Name:     strings.TrimSpace(req.Name),
 		Grade:    req.Grade,
@@ -135,12 +168,21 @@ func (s *StudentService) PatchStudent(c *fiber.Ctx) error {
 		return helper.Fail(c, fiber.StatusBadRequest, "tidak ada field yang diubah")
 	}
 
-	current, err := s.StudentRepo.FindByID(ctx, id)
+	currentStudent, err := s.StudentRepo.FindByID(ctx, id)
 	if err != nil {
 		return errorTranslator(c, err, "gagal mengambil data mahasiswa")
 	}
 
-	updatedStudent, errs := ApplyPatch(current, req)
+	current, ok := helper.CurrentUser(c)
+	if !ok {
+		return helper.Fail(c, fiber.StatusUnauthorized, "pengguna tidak terautentikasi")
+	}
+
+	if !CanAccessStudent(current, currentStudent.OwnerID, s.perms, "student:update:any") {
+		return helper.Fail(c, fiber.StatusForbidden, "anda tidak memiliki akses untuk mengubah data mahasiswa ini")
+	}
+
+	updatedStudent, errs := ApplyPatch(currentStudent, req)
 	if len(errs) > 0 {
 		return helper.FailValidation(c, errs)
 	}
