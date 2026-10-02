@@ -24,23 +24,23 @@ func RequirePermission(perms *helper.PermissionSet, permission string) fiber.Han
 	}
 }
 
-func RequireRole(roles ...string) fiber.Handler {
-	allowed := make(map[string]struct{}, len(roles))
-	for _, role := range roles {
-		allowed[role] = struct{}{}
-	}
+// func RequireRole(roles ...string) fiber.Handler {
+// 	allowed := make(map[string]struct{}, len(roles))
+// 	for _, role := range roles {
+// 		allowed[role] = struct{}{}
+// 	}
 
-	return func(c *fiber.Ctx) error {
-		user, ok := helper.CurrentUser(c)
-		if !ok {
-			return helper.Fail(c, fiber.StatusUnauthorized, "belum terautentikasi")
-		}
+// 	return func(c *fiber.Ctx) error {
+// 		user, ok := helper.CurrentUser(c)
+// 		if !ok {
+// 			return helper.Fail(c, fiber.StatusUnauthorized, "belum terautentikasi")
+// 		}
 
-		if _, granted := allowed[user.Role]; !granted {
-			return helper.Fail(c, fiber.StatusForbidden,
-				"role Anda tidak berhak mengakses endpoint ini")
-		}
+// 		if _, granted := allowed[user.Role]; !granted {
+// 			return helper.Fail(c, fiber.StatusForbidden,
+// 				"role Anda tidak berhak mengakses endpoint ini")
+// 		}
 
-		return c.Next()
-	}
-}
+// 		return c.Next()
+// 	}
+// }

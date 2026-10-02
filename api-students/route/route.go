@@ -63,4 +63,9 @@ func RegisterRoutes(app *fiber.App, deps Dependencies) {
 	students.Get("/:id", deps.StudentService.GetStudent)
 	students.Put("/:id", deps.StudentService.ReplaceStudent)
 	students.Patch("/:id", deps.StudentService.PatchStudent)
+
+	// Protected endpoints (User Management domain)
+	users := api.Group("/users", middleware.RequireAuth(deps.JWT), middleware.RequireJSON)
+	users.Put("/:id/role", middleware.RequirePermission(deps.Permissions, "role:assign"), deps.AuthService.AssignRole)
+	users.Delete("/:id", middleware.RequirePermission(deps.Permissions, "user:delete"), deps.AuthService.DeleteUser)
 }
