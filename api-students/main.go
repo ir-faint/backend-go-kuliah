@@ -41,6 +41,15 @@ func main() {
 	userRepo := repository.NewUserRepository(pool)
 	tokenRepo := repository.NewTokenRepository(pool)
 	studentRepo := repository.NewStudentRepository(pool)
+	roleRepo := repository.NewRoleRepository(pool)
+
+	rawPerms, err := roleRepo.LoadPermissions(ctx)
+	if err != nil {
+		logger.Error("gagal memuat data permission role", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	perms := helper.NewPermissionSet(rawPerms)
+	logger.Info("permission dimuat", slog.Any("roles", perms.KnownRoles()))
 
 	jwtIssuer := config.GetEnv("JWT_ISSUER", "api-students")
 	accessTTLMinutes := config.GetEnvInt("JWT_ACCESS_TTL_MINUTES", 15)
@@ -51,14 +60,15 @@ func main() {
 
 	jwtManager := helper.NewJWTManager(jwtSecret, jwtIssuer, accessTTL)
 
-	authService := service.NewAuthService(userRepo, tokenRepo, jwtManager, refreshTTL)
-	studentService := service.NewStudentService(studentRepo)
+	authService := service.NewAuthService(userRepo, tokenRepo, jwtManager, refreshTTL, perms)
+	studentService := service.NewStudentService(studentRepo, perms)
 
 	deps := route.Dependencies{
 		Pool:           pool,
 		StudentService: studentService,
 		AuthService:    authService,
 		JWT:            jwtManager,
+		Permissions:    perms,
 	}
 
 	app := config.NewApp(logger, deps)
