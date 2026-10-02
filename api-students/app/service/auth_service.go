@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -19,6 +20,7 @@ type AuthService struct {
 	TokenRepo  repository.TokenRepository
 	JWT        *helper.JWTManager
 	RefreshTTL time.Duration
+	perms      *helper.PermissionSet
 }
 
 func NewAuthService(
@@ -26,12 +28,14 @@ func NewAuthService(
 	tokenRepo repository.TokenRepository,
 	jwtManager *helper.JWTManager,
 	refreshTTL time.Duration,
+	perms *helper.PermissionSet,
 ) *AuthService {
 	return &AuthService{
 		UserRepo:   userRepo,
 		TokenRepo:  tokenRepo,
 		JWT:        jwtManager,
 		RefreshTTL: refreshTTL,
+		perms:      perms,
 	}
 }
 
@@ -200,6 +204,73 @@ func (s *AuthService) Me(c *fiber.Ctx) error {
 		return helper.Fail(c, fiber.StatusNotFound, "user tidak ditemukan")
 	}
 
-	return helper.Success(c, "informasi pengguna berhasil diambil", user)
+	permissions := s.perms.PermissionsOf(user.Role)
+
+	return helper.Success(c, "informasi pengguna berhasil diambil", fiber.Map{
+		"user":        user,
+		"permissions": permissions,
+	})
 }
 
+func (s *AuthService) AssignRole(c *fiber.Ctx) error {
+	ctx, cancel := helper.RequestContext(c)
+	defer cancel()
+
+	targetID, valid := helper.ParamID(c)
+	if !valid {
+		return helper.Fail(c, fiber.StatusBadRequest, "id user harus berupa angka positif")
+	}
+
+	current, ok := helper.CurrentUser(c)
+	if !ok {
+		return helper.Fail(c, fiber.StatusUnauthorized, "pengguna tidak terautentikasi")
+	}
+
+	var req model.AssignRoleRequest
+	if err := c.BodyParser(&req); err != nil {
+		return helper.Fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
+	}
+
+	if errs := ValidateAssignRole(current, targetID, req, s.perms); len(errs) > 0 {
+		return helper.FailValidation(c, errs)
+	}
+
+	updatedUser, err := s.UserRepo.UpdateRole(ctx, targetID, strings.TrimSpace(req.Role))
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return helper.Fail(c, fiber.StatusNotFound, "user tidak ditemukan")
+		}
+		return helper.Fail(c, fiber.StatusInternalServerError, "gagal mengubah role user")
+	}
+
+	return helper.Success(c, "role user berhasil diperbarui", updatedUser)
+}
+
+func (s *AuthService) DeleteUser(c *fiber.Ctx) error {
+	ctx, cancel := helper.RequestContext(c)
+	defer cancel()
+
+	id, valid := helper.ParamID(c)
+	if !valid {
+		return helper.Fail(c, fiber.StatusBadRequest, "id user harus berupa angka positif")
+	}
+
+	current, ok := helper.CurrentUser(c)
+	if !ok {
+		return helper.Fail(c, fiber.StatusUnauthorized, "pengguna tidak terautentikasi")
+	}
+
+	// Punya permission menghapus tidak berarti boleh menghapus dirinya sendiri.
+	if current.ID == id {
+		return helper.Fail(c, fiber.StatusForbidden, "tidak boleh menghapus akun sendiri")
+	}
+
+	if err := s.UserRepo.Delete(ctx, id); err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return helper.Fail(c, fiber.StatusNotFound, "user tidak ditemukan")
+		}
+		return helper.Fail(c, fiber.StatusInternalServerError, "gagal menghapus user")
+	}
+
+	return helper.NoContent(c)
+}
