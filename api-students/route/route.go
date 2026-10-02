@@ -17,6 +17,7 @@ type Dependencies struct {
 	StudentService *service.StudentService
 	AuthService    *service.AuthService
 	JWT            *helper.JWTManager
+	Permissions    *helper.PermissionSet
 }
 
 // HealthCheck mengembalikan handler fiber untuk memeriksa kesehatan database.
@@ -52,12 +53,14 @@ func RegisterRoutes(app *fiber.App, deps Dependencies) {
 	auth.Post("/logout", deps.AuthService.Logout)
 	auth.Get("/me", middleware.RequireAuth(deps.JWT), deps.AuthService.Me)
 
-	// Protected endpoints (All students endpoints require auth)
+	// Protected endpoints (Students domain)
 	students := api.Group("/students", middleware.RequireAuth(deps.JWT), middleware.RequireJSON)
-	students.Get("/", deps.StudentService.ListStudents)
+	students.Get("/", middleware.RequirePermission(deps.Permissions, "student:list"), deps.StudentService.ListStudents)
+	students.Post("/", middleware.RequirePermission(deps.Permissions, "student:create"), deps.StudentService.CreateStudent)
+	students.Delete("/:id", middleware.RequirePermission(deps.Permissions, "student:delete"), deps.StudentService.DeleteStudent)
+
+	// Endpoints guarded by service-level ownership checks (CanAccessStudent)
 	students.Get("/:id", deps.StudentService.GetStudent)
-	students.Post("/", deps.StudentService.CreateStudent)
 	students.Put("/:id", deps.StudentService.ReplaceStudent)
 	students.Patch("/:id", deps.StudentService.PatchStudent)
-	students.Delete("/:id", deps.StudentService.DeleteStudent)
 }

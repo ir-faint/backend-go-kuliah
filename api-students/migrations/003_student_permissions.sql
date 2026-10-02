@@ -26,7 +26,12 @@ INSERT INTO permissions (name, description) VALUES
     ('student:read:any', 'Melihat detail data mahasiswa milik siapa saja'),
     ('student:create', 'Menambahkan data mahasiswa baru'),
     ('student:update:any', 'Mengubah data mahasiswa milik siapa saja'),
-    ('student:delete', 'Menghapus data mahasiswa')
+    ('student:delete', 'Menghapus data mahasiswa'),
+    ('user:list', 'Melihat daftar seluruh user'),
+    ('user:read:any', 'Melihat data user mana pun'),
+    ('user:update:any', 'Mengubah data user mana pun'),
+    ('user:delete', 'Menghapus user'),
+    ('role:assign', 'Mengubah role milik user lain')
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO role_permissions (role_name, permission_name) VALUES
@@ -35,9 +40,16 @@ INSERT INTO role_permissions (role_name, permission_name) VALUES
     ('admin', 'student:create'),
     ('admin', 'student:update:any'),
     ('admin', 'student:delete'),
+    ('admin', 'user:list'),
+    ('admin', 'user:read:any'),
+    ('admin', 'user:update:any'),
+    ('admin', 'user:delete'),
+    ('admin', 'role:assign'),
     ('staff', 'student:list'),
     ('staff', 'student:read:any'),
-    ('staff', 'student:create')
+    ('staff', 'student:create'),
+    ('staff', 'user:list'),
+    ('staff', 'user:read:any')
 ON CONFLICT DO NOTHING;
 
 UPDATE users SET role = 'user' WHERE role NOT IN (SELECT name FROM roles);
