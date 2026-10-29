@@ -2,7 +2,7 @@ package service
 
 import (
 	"api-students/app/model"
-	"errors"
+	"api-students/helper"
 	"net/mail"
 	"regexp"
 	"strings"
@@ -14,32 +14,16 @@ var (
 	digitRegex    = regexp.MustCompile(`[0-9]`)
 
 	weakPasswords = map[string]bool{
-		"password": true,
-		"12345678": true,
-		"qwerty123": true,
+		"password":    true,
+		"12345678":    true,
+		"qwerty123":   true,
 		"password123": true,
-		"admin123": true,
+		"admin123":    true,
 	}
 )
 
 func isValidUsername(username string) bool {
 	return usernameRegex.MatchString(username)
-}
-
-func checkPasswordStrength(password string) error {
-	if len(password) < 8 {
-		return errors.New("password minimal 8 karakter")
-	}
-	if !letterRegex.MatchString(password) {
-		return errors.New("password harus mengandung setidaknya satu huruf")
-	}
-	if !digitRegex.MatchString(password) {
-		return errors.New("password harus mengandung setidaknya satu angka")
-	}
-	if weakPasswords[strings.ToLower(password)] {
-		return errors.New("password terlalu lemah dan mudah ditebak")
-	}
-	return nil
 }
 
 func ValidateRegister(req model.RegisterRequest) map[string]string {
@@ -61,8 +45,8 @@ func ValidateRegister(req model.RegisterRequest) map[string]string {
 
 	if req.Password == "" {
 		errs["password"] = "password wajib diisi"
-	} else if err := checkPasswordStrength(req.Password); err != nil {
-		errs["password"] = err.Error()
+	} else if err := helper.CheckPasswordStrength(req.Password); err != "" {
+		errs["password"] = err
 	}
 
 	return errs

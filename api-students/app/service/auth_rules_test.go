@@ -2,6 +2,7 @@ package service
 
 import (
 	"api-students/app/model"
+	"api-students/helper"
 	"testing"
 )
 
@@ -20,8 +21,8 @@ func TestCheckPasswordStrength(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := checkPasswordStrength(tt.password)
-			if (err != nil) != tt.wantErr {
+			err := helper.CheckPasswordStrength(tt.password)
+			if (err != "") != tt.wantErr {
 				t.Errorf("checkPasswordStrength(%q) error = %v, wantErr %v", tt.password, err, tt.wantErr)
 			}
 		})
