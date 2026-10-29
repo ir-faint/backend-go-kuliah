@@ -26,7 +26,7 @@ var payloadMethods = map[string]bool{
 func RequireJSON(c *fiber.Ctx) error {
 	if payloadMethods[c.Method()] {
 		if !strings.HasPrefix(c.Get("Content-Type"), fiber.MIMEApplicationJSON) {
-			return helper.Fail(c, fiber.StatusUnsupportedMediaType, "Content-Type harus application/json")
+			return helper.UnsupportedMediaType("Content-Type harus application/json")
 		}
 	}
 	return c.Next()
