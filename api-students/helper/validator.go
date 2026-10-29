@@ -12,6 +12,7 @@ import (
 
 var (
 	usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]{3,50}$`)
+	nimRegex      = regexp.MustCompile(`^[0-9]{8}$`)
 	letterRegex   = regexp.MustCompile(`[a-zA-Z]`)
 	digitRegex    = regexp.MustCompile(`[0-9]`)
 
@@ -48,6 +49,9 @@ func newValidator() *validator.Validate {
 	})
 	_ = v.RegisterValidation("strongpassword", func(fl validator.FieldLevel) bool {
 		return CheckPasswordStrength(fl.Field().String()) == ""
+	})
+	_ = v.RegisterValidation("nim", func(fl validator.FieldLevel) bool {
+		return nimRegex.MatchString(fl.Field().String())
 	})
 	return v
 }
@@ -104,6 +108,8 @@ func messageFor(fe validator.FieldError) string {
 			return CheckPasswordStrength(value)
 		}
 		return "password tidak memenuhi syarat"
+	case "nim":
+		return "format NIM tidak valid (harus berupa 8 digit angka)"
 	case "oneof":
 		return "harus salah satu dari: " +
 			strings.ReplaceAll(fe.Param(), " ", ", ")

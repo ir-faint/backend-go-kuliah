@@ -13,7 +13,7 @@ type User struct {
 }
 
 type AssignRoleRequest struct {
-	Role string `json:"role"`
+	Role string `json:"role" validate:"required,oneof=admin staff user"`
 }
 
 type ErrorResponse struct {
