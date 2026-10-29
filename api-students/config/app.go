@@ -4,9 +4,9 @@ import (
 	"errors"
 	"log/slog"
 
+	"api-students/app/model"
 	"api-students/helper"
 	"api-students/middleware"
-	"api-students/app/model"
 	"api-students/route"
 
 	"github.com/gofiber/fiber/v2"
@@ -25,7 +25,7 @@ func NewApp(logger *slog.Logger, deps route.Dependencies) *fiber.App {
 
 	// Penampung terakhir untuk URL yang tidak dikenal.
 	app.Use(func(c *fiber.Ctx) error {
-		return helper.Fail(c, fiber.StatusNotFound, "endpoint tidak ditemukan")
+		return helper.NotFound("endpoint tidak ditemukan")
 	})
 
 	return app
