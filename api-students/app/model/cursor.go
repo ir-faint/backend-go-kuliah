@@ -12,3 +12,10 @@ type CursorMeta struct {
 	NextCursor string `json:"next_cursor,omitempty"`
 	HasMore    bool   `json:"has_more"`
 }
+
+type CursorQuery struct {
+	Limit    int
+	After    *Cursor
+	Search   string
+	IsActive *bool
+}
