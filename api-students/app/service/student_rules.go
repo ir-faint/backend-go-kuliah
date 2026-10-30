@@ -5,40 +5,6 @@ import (
 	"strings"
 )
 
-// ValidateCreate memeriksa isi permintaan pembuatan mahasiswa.
-func ValidateCreate(req model.CreateStudentRequest) map[string]string {
-	errs := map[string]string{}
-
-	if strings.TrimSpace(req.NIM) == "" {
-		errs["nim"] = "wajib diisi"
-	}
-	if strings.TrimSpace(req.Name) == "" {
-		errs["name"] = "wajib diisi"
-	}
-	if req.Grade < 0 || req.Grade > 4.00 {
-		errs["grade"] = "nilai harus berada di rentang 0.00-4.00"
-	}
-
-	return errs
-}
-
-// ValidateReplace memeriksa isi permintaan PUT.
-func ValidateReplace(req model.UpdateStudentRequest) map[string]string {
-	errs := map[string]string{}
-
-	if strings.TrimSpace(req.NIM) == "" {
-		errs["nim"] = "wajib diisi pada PUT"
-	}
-	if strings.TrimSpace(req.Name) == "" {
-		errs["name"] = "wajib diisi pada PUT"
-	}
-	if req.Grade < 0 || req.Grade > 4.00 {
-		errs["grade"] = "nilai harus berada di rentang 0.00-4.00"
-	}
-
-	return errs
-}
-
 // ApplyPatch menyalin field yang dikirim ke data yang sudah ada.
 // Field yang bernilai nil dibiarkan apa adanya.
 func ApplyPatch(
@@ -86,4 +52,3 @@ func CountTotalPages(total, limit int) int {
 	}
 	return (total + limit - 1) / limit
 }
-

@@ -11,10 +11,9 @@ import (
 )
 
 var (
-	usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]{3,50}$`)
-	nimRegex      = regexp.MustCompile(`^[0-9]{8}$`)
-	letterRegex   = regexp.MustCompile(`[a-zA-Z]`)
-	digitRegex    = regexp.MustCompile(`[0-9]`)
+	nimRegex    = regexp.MustCompile(`^[0-9]{8}$`)
+	letterRegex = regexp.MustCompile(`[a-zA-Z]`)
+	digitRegex  = regexp.MustCompile(`[0-9]`)
 
 	weakPasswords = map[string]bool{
 		"password":    true,

@@ -77,7 +77,7 @@ func (s *AuthService) Register(c *fiber.Ctx) error {
 		return helper.BadRequest("body harus berupa JSON yang valid")
 	}
 
-	if errs := ValidateRegister(req); len(errs) > 0 {
+	if errs := helper.ValidateStruct(req); len(errs) > 0 {
 		return helper.Validation(errs)
 	}
 
@@ -113,7 +113,7 @@ func (s *AuthService) Login(c *fiber.Ctx) error {
 		return helper.BadRequest("body harus berupa JSON yang valid")
 	}
 
-	if errs := ValidateLogin(req); len(errs) > 0 {
+	if errs := helper.ValidateStruct(req); len(errs) > 0 {
 		return helper.Validation(errs)
 	}
 
@@ -231,8 +231,12 @@ func (s *AuthService) AssignRole(c *fiber.Ctx) error {
 		return helper.BadRequest("body harus berupa JSON yang valid")
 	}
 
-	if errs := ValidateAssignRole(current, targetID, req, s.perms); len(errs) > 0 {
+	if errs := helper.ValidateStruct(req); len(errs) > 0 {
 		return helper.Validation(errs)
+	}
+
+	if current.ID == targetID {
+		return helper.Forbidden("tidak boleh mengubah role diri sendiri")
 	}
 
 	updatedUser, err := s.UserRepo.UpdateRole(ctx, targetID, strings.TrimSpace(req.Role))

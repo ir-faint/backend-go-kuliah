@@ -54,38 +54,3 @@ func TestCanAccessStudent(t *testing.T) {
 		t.Error("admin harus dapat mengubah data mahasiswa milik siapa saja")
 	}
 }
-
-func TestValidateAssignRole(t *testing.T) {
-	rawPerms := map[string][]string{
-		"admin": {"role:assign"},
-		"staff": {},
-		"user":  {},
-	}
-	perms := helper.NewPermissionSet(rawPerms)
-
-	admin := model.AuthUser{ID: 1, Role: "admin"}
-
-	// 1. Role kosong
-	errs := ValidateAssignRole(admin, 2, model.AssignRoleRequest{Role: ""}, perms)
-	if errs["role"] != "wajib diisi" {
-		t.Errorf("diharapkan error 'wajib diisi', dapat: %v", errs["role"])
-	}
-
-	// 2. Role tidak dikenal
-	errs = ValidateAssignRole(admin, 2, model.AssignRoleRequest{Role: "invalid_role"}, perms)
-	if errs["role"] == "" {
-		t.Error("diharapkan error role tidak dikenal")
-	}
-
-	// 3. Mengubah role diri sendiri
-	errs = ValidateAssignRole(admin, 1, model.AssignRoleRequest{Role: "staff"}, perms)
-	if errs["role"] != "tidak boleh mengubah role diri sendiri" {
-		t.Errorf("diharapkan error 'tidak boleh mengubah role diri sendiri', dapat: %v", errs["role"])
-	}
-
-	// 4. Kasus valid
-	errs = ValidateAssignRole(admin, 2, model.AssignRoleRequest{Role: "staff"}, perms)
-	if len(errs) > 0 {
-		t.Errorf("diharapkan tidak ada error pada payload valid, dapat: %v", errs)
-	}
-}
