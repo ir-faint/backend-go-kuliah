@@ -27,20 +27,24 @@ func (s *StudentService) ListStudents(c *fiber.Ctx) error {
 	ctx, cancel := helper.RequestContext(c)
 	defer cancel()
 
-	q := helper.ParseListQuery(c)
-
-	students, total, err := s.StudentRepo.FindAll(ctx, q)
+	q, err := helper.ParseCursorQuery(c)
 	if err != nil {
 		return helper.Internal(err)
 	}
 
-	totalPages := CountTotalPages(total, q.Limit)
+	students, err := s.StudentRepo.FindAfterCursor(ctx, q)
+	if err != nil {
+		return helper.Internal(err)
+	}
 
-	return helper.SuccessList(c, "daftar mahasiswa berhasil diambil", students, &model.Meta{
-		Page:       q.Page,
-		Limit:      q.Limit,
-		Total:      total,
-		TotalPages: totalPages,
+	hasMore := len(students) > q.Limit
+	if hasMore {
+		students = students[:q.Limit]
+	}
+
+	return helper.SuccessCursor(c, "daftar mahasiswa berhasil diambil", students, &model.CursorMeta{
+		Limit:   q.Limit,
+		HasMore: hasMore,
 	})
 }
 

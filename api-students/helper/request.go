@@ -51,6 +51,41 @@ func ParseListQuery(c *fiber.Ctx) model.ListQuery {
 	return q
 }
 
+// ParseCursorQuery membaca parameter pagination cursor dari query string URL
+func ParseCursorQuery(c *fiber.Ctx) (model.CursorQuery, error) {
+	q := model.CursorQuery{
+		Limit:  c.QueryInt("limit", 10),
+		Search: strings.TrimSpace(c.Query("search")),
+	}
+
+	if q.Limit < 1 {
+		q.Limit = 10
+	}
+	if q.Limit > 100 {
+		q.Limit = 100
+	}
+
+	// Baca cursor jika dikirim
+	if rawCursor := strings.TrimSpace(c.Query("cursor")); rawCursor != "" {
+		cur, err := DecodeCursor(rawCursor)
+		if err != nil {
+			return q, BadRequest("cursor tidak valid")
+		}
+		q.After = &cur
+	}
+
+	// Baca filter is_active jika dikirim
+	if raw := strings.TrimSpace(c.Query("is_active")); raw != "" {
+		v, err := strconv.ParseBool(raw)
+		if err != nil {
+			return q, BadRequest("is_active harus bernilai boolean (true/false)")
+		}
+		q.IsActive = &v
+	}
+
+	return q, nil
+}
+
 func RequestContext(c *fiber.Ctx) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(c.UserContext(), 5*time.Second)
 }
